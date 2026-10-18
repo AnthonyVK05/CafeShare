@@ -829,7 +829,7 @@ select.inline {
 
     <!-- Load order matters because the prototype uses shared global functions. -->
 <script>
-    /*
+/*
  * CafeShare - Data, storage and common data helpers
  * Split from the original single-file prototype for maintainability.
  * Behaviour is intentionally preserved unless noted in the existing code.
@@ -856,22 +856,22 @@ const seedDB=()=>({
   ],
   categories:["Rice","Noodles","Chicken","Vegetarian","Drinks","Snacks","Desserts"],
   foodItems:[
-    {food_id:1,vendor_id:1,name:"Nasi Ayam Goreng",desc:"Fried chicken rice with sambal & soup",category:"Rice",price:6.00,icon:"🍗",tags:["halal"],availability:"available",wait:8,pop:94,sold:132},
-    {food_id:2,vendor_id:1,name:"Mee Goreng Mamak",desc:"Spicy mamak-style fried noodles",category:"Noodles",price:5.50,icon:"🍜",tags:["halal"],availability:"available",wait:10,pop:88,sold:118},
-    {food_id:3,vendor_id:1,name:"Nasi Lemak Biasa",desc:"Coconut rice, egg, peanuts & sambal",category:"Rice",price:4.50,icon:"🍚",tags:["halal","vegetarian"],availability:"limited",wait:6,pop:91,sold:125},
-    {food_id:4,vendor_id:1,name:"Air Teh O Ais",desc:"Iced tea, sweetened",category:"Drinks",price:2.00,icon:"🧋",tags:["halal","vegetarian"],availability:"available",wait:2,pop:76,sold:96},
-    {food_id:5,vendor_id:2,name:"Economy Rice (3 dishes)",desc:"Rice + 3 dishes of your choice",category:"Rice",price:7.00,icon:"🍛",tags:[],availability:"available",wait:5,pop:90,sold:121},
-    {food_id:6,vendor_id:2,name:"Wantan Mee",desc:"Springy noodles with char siew & wantan",category:"Noodles",price:6.50,icon:"🍝",tags:[],availability:"available",wait:7,pop:85,sold:104},
-    {food_id:7,vendor_id:2,name:"Stir-fried Mixed Veg",desc:"Seasonal vegetables, garlic style",category:"Vegetarian",price:5.00,icon:"🥬",tags:["vegetarian"],availability:"available",wait:4,pop:64,sold:58},
-    {food_id:8,vendor_id:2,name:"Curry Puff (2 pcs)",desc:"Flaky curry puffs, potato filling",category:"Snacks",price:3.00,icon:"🥟",tags:["vegetarian"],availability:"soldout",wait:0,pop:70,sold:82},
-    {food_id:9,vendor_id:3,name:"Fresh Orange Juice",desc:"Squeezed to order, no sugar added",category:"Drinks",price:4.00,icon:"🍊",tags:["vegetarian"],availability:"available",wait:3,pop:82,sold:90},
-    {food_id:10,vendor_id:3,name:"Banana Smoothie",desc:"Banana, milk & honey blend",category:"Drinks",price:5.00,icon:"🍌",tags:["vegetarian"],availability:"available",wait:4,pop:71,sold:66},
-    {food_id:11,vendor_id:3,name:"Sandwich Combo",desc:"Egg sandwich + orange juice",category:"Snacks",price:6.00,icon:"🥪",tags:["vegetarian"],availability:"limited",wait:5,pop:68,sold:54},
-    {food_id:12,vendor_id:4,name:"Kuih Lapis (3 pcs)",desc:"Layered colourful kuih, steamed fresh",category:"Desserts",price:3.50,icon:"🍰",tags:["vegetarian"],availability:"available",wait:6,pop:74,sold:71},
-    {food_id:13,vendor_id:4,name:"ABC Special",desc:"Shaved ice with red beans & corn",category:"Desserts",price:4.50,icon:"🍧",tags:["vegetarian"],availability:"available",wait:8,pop:80,sold:77},
-    {food_id:14,vendor_id:1,name:"Ayam Percik Set",desc:"Grilled percik chicken + rice + ulam",category:"Chicken",price:8.50,icon:"🍖",tags:["halal"],availability:"available",wait:12,pop:86,sold:95},
-    {food_id:15,vendor_id:2,name:"Chicken Rice",desc:"Poached chicken, fragrant rice & soup",category:"Chicken",price:6.00,icon:"🐔",tags:[],availability:"available",wait:8,pop:95,sold:140},
-    {food_id:16,vendor_id:3,name:"Iced Matcha Latte",desc:"Matcha with fresh milk over ice",category:"Drinks",price:5.50,icon:"🍵",tags:["vegetarian"],availability:"available",wait:3,pop:79,sold:63}
+    {food_id:1,vendor_id:1,name:"Nasi Ayam Goreng",desc:"Fried chicken rice with sambal & soup",category:"Rice",price:6.00,icon:"🍗", image:"images/nasi-ayam-goreng.jpg",tags:["halal"],availability:"available",wait:8,pop:94,sold:132},
+    {food_id:2,vendor_id:1,name:"Mee Goreng Mamak",desc:"Spicy mamak-style fried noodles",category:"Noodles",price:5.50,icon:"🍜",image:"images/mee-goreng.jpg",tags:["halal"],availability:"available",wait:10,pop:88,sold:118},
+    {food_id:3,vendor_id:1,name:"Nasi Lemak Biasa",desc:"Coconut rice, egg, peanuts & sambal",category:"Rice",price:4.50,icon:"🍚",image:"images/nasi-lemak.jpg",tags:["halal","vegetarian"],availability:"limited",wait:6,pop:91,sold:125},
+    {food_id:4,vendor_id:1,name:"Air Teh O Ais",desc:"Iced tea, sweetened",category:"Drinks",price:2.00,icon:"🧋",image:"images/teh-o-ais.jpg",tags:["halal","vegetarian"],availability:"available",wait:2,pop:76,sold:96},
+    {food_id:5,vendor_id:2,name:"Economy Rice (3 dishes)",desc:"Rice + 3 dishes of your choice",category:"Rice",price:7.00,icon:"🍛",image:"images/economy-rice.jpeg",tags:[],availability:"available",wait:5,pop:90,sold:121},
+    {food_id:6,vendor_id:2,name:"Wantan Mee",desc:"Springy noodles with char siew & wantan",category:"Noodles",price:6.50,icon:"🍝",image:"images/wantan-mee.jpg",tags:[],availability:"available",wait:7,pop:85,sold:104},
+    {food_id:7,vendor_id:2,name:"Stir-fried Mixed Veg",desc:"Seasonal vegetables, garlic style",category:"Vegetarian",price:5.00,icon:"🥬",image:"images/stir-fried-veg.jpg",tags:["vegetarian"],availability:"available",wait:4,pop:64,sold:58},
+    {food_id:8,vendor_id:2,name:"Curry Puff (2 pcs)",desc:"Flaky curry puffs, potato filling",category:"Snacks",price:3.00,icon:"🥟",image:"images/curry-puff.webp",tags:["vegetarian"],availability:"soldout",wait:0,pop:70,sold:82},
+    {food_id:9,vendor_id:3,name:"Fresh Orange Juice",desc:"Squeezed to order, no sugar added",category:"Drinks",price:4.00,icon:"🍊",image:"images/orange-juice.jpeg",tags:["vegetarian"],availability:"available",wait:3,pop:82,sold:90},
+    {food_id:10,vendor_id:3,name:"Banana Smoothie",desc:"Banana, milk & honey blend",category:"Drinks",price:5.00,icon:"🍌",image:"images/banana-smoothie.jpg",tags:["vegetarian"],availability:"available",wait:4,pop:71,sold:66},
+    {food_id:11,vendor_id:3,name:"Sandwich Combo",desc:"Egg sandwich + orange juice",category:"Snacks",price:6.00,icon:"🥪",image:"images/sandwich.jpg",tags:["vegetarian"],availability:"limited",wait:5,pop:68,sold:54},
+    {food_id:12,vendor_id:4,name:"Kuih Lapis (3 pcs)",desc:"Layered colourful kuih, steamed fresh",category:"Desserts",price:3.50,icon:"🍰",image:"images/kuih-lapis.jpg",tags:["vegetarian"],availability:"available",wait:6,pop:74,sold:71},
+    {food_id:13,vendor_id:4,name:"ABC Special",desc:"Shaved ice with red beans & corn",category:"Desserts",price:4.50,icon:"🍧",image:"images/abc-special.jpg",tags:["vegetarian"],availability:"available",wait:8,pop:80,sold:77},
+    {food_id:14,vendor_id:1,name:"Ayam Percik Set",desc:"Grilled percik chicken + rice + ulam",category:"Chicken",price:8.50,icon:"🍖",image:"images/ayam-percik.jpeg",tags:["halal"],availability:"available",wait:12,pop:86,sold:95},
+    {food_id:15,vendor_id:2,name:"Chicken Rice",desc:"Poached chicken, fragrant rice & soup",category:"Chicken",price:6.00,icon:"🐔",image:"images/chicken-rice.webp",tags:[],availability:"available",wait:8,pop:95,sold:140},
+    {food_id:16,vendor_id:3,name:"Iced Matcha Latte",desc:"Matcha with fresh milk over ice",category:"Drinks",price:5.50,icon:"🍵",image:"images/iced-matcha-latte.jpeg",tags:["vegetarian"],availability:"available",wait:3,pop:79,sold:63}
   ],
   favourites:[{favourite_id:1,student_id:1,food_id:15},{favourite_id:2,student_id:1,food_id:9}],
   ratings:[{rating_id:1,student_id:1,vendor_id:2,food_id:15,rating:5,comment:"Juicy chicken, always fresh!"}],
@@ -888,6 +888,35 @@ const seedDB=()=>({
 function loadDB(){try{const d=JSON.parse(localStorage.getItem(DB_KEY));if(d&&d.foodItems)return d;}catch(e){}const s=seedDB();localStorage.setItem(DB_KEY,JSON.stringify(s));return s;}
 function saveDB(){localStorage.setItem(DB_KEY,JSON.stringify(DB));}
 let DB=loadDB();
+
+// Add default image paths to existing demo food records
+const defaultFoodImages = {
+  1: "images/nasi-ayam-goreng.jpg",
+  2: "images/mee-goreng.jpg",
+  3: "images/nasi-lemak.jpg",
+  4: "images/teh-o-ais.jpg",
+  5: "images/economy-rice.jpeg",
+  6: "images/wantan-mee.jpg",
+  7: "images/stir-fried-veg.jpg",
+  8: "images/curry-puff.webp",
+  9: "images/orange-juice.jpeg",
+  10: "images/banana-smoothie.jpg",
+  11: "images/sandwich.jpg",
+  12: "images/kuih-lapis.jpg",
+  13: "images/abc-special.jpg",
+  14: "images/ayam-percik.jpeg",
+  15: "images/chicken-rice.webp",
+  16: "images/iced-matcha-latte.jpeg"
+};
+
+DB.foodItems.forEach(f => {
+  if (!("image" in f) && defaultFoodImages[f.food_id]) {
+    f.image = defaultFoodImages[f.food_id];
+  }
+});
+
+saveDB();
+
 const DEFAULT_CATEGORIES=["Rice","Noodles","Chicken","Vegetarian","Drinks","Snacks","Desserts"];
 if(!Array.isArray(DB.categories)||!DB.categories.length)DB.categories=[...DEFAULT_CATEGORIES];
 DB.students.forEach(st=>{if(!st.status)st.status="active";});
