@@ -1115,7 +1115,7 @@ function notifsHTML(){
   <div><strong>${n.title}</strong><p class="muted small">${n.message}</p><p class="muted small">${n.created_at}</p></div></div>`).join("")||`<div class="empty">You're all caught up 🎉</div>`}</div>`;
 }
 
-    /*
+/*
  * CafeShare - Student module
  * Split from the original single-file prototype for maintainability.
  * Behaviour is intentionally preserved unless noted in the existing code.
@@ -1144,7 +1144,10 @@ function foodCard(f,ctx){
   const fav=st&&DB.favourites.some(x=>x.student_id===st.student_id&&x.food_id===f.food_id);
   return `<div class="card">
     <div class="foodimg" style="background:${catColor[f.category]||"#eee"}">
-      ${f.icon}
+      ${f.image
+        ? `<img src="${f.image}" alt="${f.name}" class="food-card-image">`
+        : `<span class="food-card-icon">${f.icon}</span>`
+      }
       <span class="avail ${availMeta(displayAvailability)[1]}">${dot} ${al}</span>
       <button class="fav" data-fav="${f.food_id}">${fav?"❤️":"🤍"}</button>
     </div>
@@ -1324,7 +1327,10 @@ function builderHTML(){
     <div class="panel">
       <h3>Suggested add-ons within budget</h3>
       <p class="muted small" style="margin:6px 0 10px">Drinks, snacks & sides that still fit your remaining ${fmt(Math.max(mealBudget-total,0))}.</p>
-      <div class="grid" style="grid-template-columns:1fr 1fr">${DB.foodItems.filter(f=>["Drinks","Snacks","Desserts"].includes(f.category)&&f.stock_qty>0&&DB.vendors.find(v=>v.vendor_id===f.vendor_id)?.is_open!==false&&f.price<=Math.max(mealBudget-total,0)).slice(0,4).map(f=>`<div class="card"><div class="foodimg" style="height:70px;font-size:1.8rem;background:${catColor[f.category]}">${f.icon}</div><div class="cardbody"><div class="rowline"><span class="foodname" style="font-size:.9rem">${f.name}</span><span class="price">${fmt(f.price)}</span></div><button class="btn-ghost btn-sm" data-addmeal="${f.food_id}">+ Add</button></div></div>`).join("")||`<p class="muted small">No small items fit the remaining budget.</p>`}</div>
+      <div class="grid" style="grid-template-columns:1fr 1fr">${DB.foodItems.filter(f=>["Drinks","Snacks","Desserts"].includes(f.category)&&f.stock_qty>0&&DB.vendors.find(v=>v.vendor_id===f.vendor_id)?.is_open!==false&&f.price<=Math.max(mealBudget-total,0)).slice(0,4).map(f=>`<div class="card"><div class="foodimg" style="height:70px;font-size:1.8rem;background:${catColor[f.category]}">
+      ${f.image ? `<img src="${f.image}" alt="${f.name}" style="width:100%;height:70px;object-fit:contain;">`: f.icon}</div>
+      <div class="cardbody"><div class="rowline"><span class="foodname" style="font-size:.9rem">${f.name}</span><span class="price">${fmt(f.price)}</span></div>
+      <button class="btn-ghost btn-sm" data-addmeal="${f.food_id}">+ Add</button></div></div>`).join("")||`<p class="muted small">No small items fit the remaining budget.</p>`}</div>
     </div>
   </div>`;
 }
