@@ -969,7 +969,7 @@ function toast(msg){const t=document.createElement("div");t.className="toast";t.
 function notify(user_id,title,message){DB.notifications.push({notification_id:nid(DB.notifications,"notification_id"),user_id,title,message,read_status:false,created_at:new Date().toLocaleString("en-MY",{hour12:false})});saveDB();}
 
 
-    /*
+/*
  * CafeShare - Shared navigation, theme and UI helpers
  * Split from the original single-file prototype for maintainability.
  * Behaviour is intentionally preserved unless noted in the existing code.
@@ -1025,6 +1025,7 @@ function notifsHTML(){
   ${list.map(n=>`<div class="notifitem ${n.read_status?"":"unread"}"><span>${n.title.includes("stock")||n.title.includes("available")?"✅":n.title.includes("sold")?"🔴":n.title.includes("demand")||n.title.includes("Peak")?"📈":"📢"}</span>
   <div><strong>${n.title}</strong><p class="muted small">${n.message}</p><p class="muted small">${n.created_at}</p></div></div>`).join("")||`<div class="empty">You're all caught up 🎉</div>`}</div>`;
 }
+
 
 /*
  * CafeShare - Student module
@@ -1536,7 +1537,7 @@ function vreviewsHTML(){
 }
 function saveReviewReply(rid){const r=DB.ratings.find(x=>x.rating_id===rid&&x.vendor_id===myVendor().vendor_id),input=document.getElementById("reply-"+rid);if(!r||!input)return;r.reply=input.value.trim();saveDB();render();toast(r.reply?"Reply saved":"Reply removed");}
 
-    /*
+/*
  * CafeShare - Admin module
  * Split from the original single-file prototype for maintainability.
  * Behaviour is intentionally preserved unless noted in the existing code.
@@ -1637,6 +1638,7 @@ function postAdminAnn(){const t=document.getElementById("aa-text").value.trim();
  * Split from the original single-file prototype for maintainability.
  * Behaviour is intentionally preserved unless noted in the existing code.
  */
+    render();
 
 /* ==================== BOOT ==================== */
 </script>
