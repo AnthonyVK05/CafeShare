@@ -947,28 +947,10 @@ const nextId=arr=>arr.length?Math.max(...arr.map(x=>x[x.constructor===Array?0:0]
 const nid=(arr,pk)=>arr.reduce((m,x)=>Math.max(m,x[pk]),0)+1;
 const fmt=n=>"RM "+n.toFixed(2);
 const vName=id=>{const v=DB.vendors.find(v=>v.vendor_id===id);return v?v.stall_name:"—";};
-const catColor = {
-    Rice: "#fff1e4",
-    Noodles: "#e0f2fe",
-    Drinks: "#dcfce7",
-    Snacks: "#fef9c3",
-    Desserts: "#fce7f3",
-    Vegetarian: "#d1fae5",
-    Chicken: "#fee2e2"
-};
-
-const categoryIcons = {
-    Rice: "🍚",
-    Noodles: "🍜",
-    Chicken: "🍗",
-    Vegetarian: "🥬",
-    Drinks: "🧃",
-    Snacks: "🍿",
-    Desserts: "🍰"
-};
-
-const getCategories = () => DB.categories;
-const categoryIcon = c => categoryIcons[c] || "🍽️";
+const catColor={Rice:"#fff1e4",Noodles:"#e0f2fe",Drinks:"#dcfce7",Snacks:"#fef9c3",Desserts:"#fce7f3",Vegetarian:"#d1fae5",Chicken:"#fee2e2"};
+const categoryIcons={Rice:"🍚",Noodles:"🍜",Chicken:"🍗",Vegetarian:"🥬",Drinks:"🧃",Snacks:"🍿",Desserts:"🍰"};
+const getCategories=()=>DB.categories;
+const categoryIcon=c=>categoryIcons[c]||"🍽️";
 function availMeta(a){return a==="closed"?["Stall closed","st-so","⚫"]:a==="available"?["Available","st-av","🟢"]:a==="limited"?["Almost sold out","st-li","🟡"]:["Sold out","st-so","🔴"];}
 function syncStockAvailability(f){if(!f)return;f.stock_qty=Math.max(0,parseInt(f.stock_qty)||0);f.availability=f.stock_qty<=0?"soldout":f.stock_qty<=5?"limited":"available";}
 function orderStatusMeta(st){return ({new:["New order","var(--amber)"],accepted:["Accepted","var(--blue)"],preparing:["Preparing","var(--purple)"],ready:["Ready for pickup","var(--amber)"],collected:["Collected ✓","var(--green)"],rejected:["Rejected","var(--red)"],cancelled:["Cancelled","var(--red)"]})[st]||[st||"Unknown","var(--muted)"]; }
