@@ -1173,11 +1173,6 @@ function foodCard(f,ctx){
   const [al,,dot]=availMeta(displayAvailability);
   const st=curStudent();
   const fav=st&&DB.favourites.some(x=>x.student_id===st.student_id&&x.food_id===f.food_id);
-  const imagePath = f.image
-  ? (f.image.startsWith("images/")
-      ? f.image
-      : `images/${f.image.replace(/^\/+/, "")}`)
-  : "";
   return `<div class="card">
     <div class="foodimg" style="background:${catColor[f.category]||"#eee"}">
       ${f.image
@@ -1447,6 +1442,7 @@ function collectAll(){const st=curStudent();DB.orders.filter(o=>o.student_id===s
 
 /* ==================== VENDOR ==================== */
 let vview="dash", editFoodId=null;
+let selectedFoodImage="";
 function myVendor(){const u=curUser();return DB.vendors.find(v=>v.user_id===u.user_id);}
 function vendorTabs(){return [
   {v:"dash",l:"Dashboard"},{v:"menu",l:"Menu"},{v:"orders",l:"Orders"},
@@ -1575,6 +1571,7 @@ function vmenuHTML(){
         <div class="field" style="flex:1;min-width:110px"><label>Category</label><select id="mf-cat">${getCategories().map(c=>`<option ${e&&e.category===c?"selected":""}>${c}</option>`).join("")}</select></div>
       </div>
       <div class="field"><label>Icon (emoji)</label><input id="mf-icon" maxlength="4" value="${e?e.icon:"🍽️"}"></div>
+      <div class="field"><label>Food image</label><input type="file" id="mf-image" accept="image/*" onchange="previewFoodImage(this)"><img id="mf-image-preview" src="${e&&e.image?e.image:""}" alt="Food preview" style="display:${e&&e.image?"block":"none"};width:150px;height:120px;object-fit:cover;margin-top:10px;border-radius:8px"><div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:8px"><button type="button" class="btn-ghost btn-sm" onclick="removeFoodImage()">Remove image</button><span class="muted small">Phone photos are automatically resized for the prototype.</span></div></div>
       <div class="field"><label>Dietary tags</label><div class="chiprow" id="mf-tags">${["halal","vegetarian"].map(t=>`<button type="button" class="chip ${e&&e.tags.includes(t)?"on":""}" data-t="${t}">${t}</button>`).join("")}</div></div>
       <div style="display:flex;gap:8px"><button class="btn-brand" onclick="saveFood()">${e?"Save changes":"Add item"}</button>${e?`<button class="btn-ghost" onclick="editFoodId=null;vgo('menu')">Cancel</button>`:""}</div>
     </div>
@@ -1585,19 +1582,82 @@ function vmenuHTML(){
     </div>
   </div>`;
 }
-function bindVMenu(m){m.querySelectorAll("#mf-tags .chip").forEach(c=>c.onclick=()=>c.classList.toggle("on"));drawVendorMenu();}
+
+function bindVMenu(m){
+  const food=editFoodId?DB.foodItems.find(f=>f.food_id===editFoodId):null;
+  selectedFoodImage=food?food.image||"":"";
+  m.querySelectorAll("#mf-tags .chip").forEach(c=>{c.onclick=()=>c.classList.toggle("on");});
+  drawVendorMenu();
+}
+
+function previewFoodImage(input) {
+  const file=input.files&&input.files[0];
+  if(!file)return;
+  if(!file.type.startsWith("image/")){toast("Please select an image file.");input.value="";return;}
+
+  // GitHub Pages is static, so prototype uploads are stored in this browser's
+  // localStorage. Compress phone photos first to reduce quota problems.
+  const reader=new FileReader();
+  reader.onload=function(event){
+    const raw=event.target.result;
+    const img=new Image();
+    img.onload=function(){
+      const maxSide=900;
+      const scale=Math.min(1,maxSide/Math.max(img.naturalWidth||img.width,img.naturalHeight||img.height));
+      const w=Math.max(1,Math.round((img.naturalWidth||img.width)*scale));
+      const h=Math.max(1,Math.round((img.naturalHeight||img.height)*scale));
+      const canvas=document.createElement("canvas");
+      canvas.width=w;canvas.height=h;
+      const ctx=canvas.getContext("2d");
+      ctx.drawImage(img,0,0,w,h);
+      let compressed=canvas.toDataURL("image/jpeg",0.78);
+      if(compressed.length>900000)compressed=canvas.toDataURL("image/jpeg",0.60);
+      selectedFoodImage=compressed;
+      const preview=document.getElementById("mf-image-preview");
+      if(preview){preview.src=selectedFoodImage;preview.style.display="block";}
+      if(file.size>2*1024*1024)toast("Large phone photo compressed automatically ✅");
+    };
+    img.onerror=function(){
+      // Fallback for formats the browser cannot decode through canvas.
+      if(file.size<=2*1024*1024){
+        selectedFoodImage=raw;
+        const preview=document.getElementById("mf-image-preview");
+        if(preview){preview.src=selectedFoodImage;preview.style.display="block";}
+      }else{
+        toast("This photo format is too large to process. Try JPG, PNG or a screenshot.");
+        input.value="";
+      }
+    };
+    img.src=raw;
+  };
+  reader.onerror=function(){toast("Unable to read that photo. Please try another image.");input.value="";};
+  reader.readAsDataURL(file);
+}
+
+function removeFoodImage() {
+  selectedFoodImage = "";
+  const input=document.getElementById("mf-image");
+  const preview=document.getElementById("mf-image-preview");
+  
+  if(input)input.value="";
+  if(preview){preview.src = "";preview.style.display = "none";}
+}
 function drawVendorMenu(){
   const v=myVendor(),q=(document.getElementById("vm-search")?.value||"").toLowerCase(),st=document.getElementById("vm-status")?.value||"";
   const mine=DB.foodItems.filter(f=>f.vendor_id===v.vendor_id&&(!q||f.name.toLowerCase().includes(q)||f.category.toLowerCase().includes(q))&&(!st||f.availability===st));
   const box=document.getElementById("vm-table");if(!box)return;
-  box.innerHTML=`<div style="overflow-x:auto"><table><tr><th>Item</th><th>Price</th><th>Status</th><th>Stock</th><th>Sold</th><th></th></tr>${mine.map(f=>`<tr><td>${f.icon} <strong>${f.name}</strong><br><span class="muted small">${f.category} · ⏱ ${f.wait}m</span></td><td>${fmt(f.price)}</td><td><span class="statuschip ${availMeta(f.availability)[1]}">${availMeta(f.availability)[0]}</span></td><td><div style="display:flex;gap:5px;align-items:center;min-width:170px"><button class="btn-ghost btn-sm" onclick="adjustStock(${f.food_id},-1)">−</button><input id="vm-stock-${f.food_id}" type="number" min="0" value="${f.stock_qty||0}" style="width:66px;padding:5px 7px"><button class="btn-ghost btn-sm" onclick="adjustStock(${f.food_id},1)">+</button><button class="btn-ghost btn-sm" onclick="updateStock(${f.food_id})">Set</button></div></td><td>${f.sold||0}</td><td style="white-space:nowrap"><button class="btn-ghost btn-sm" onclick="editFoodId=${f.food_id};vgo('menu')">✏️</button> <button class="btn-red btn-sm" onclick="delFood(${f.food_id})">🗑</button></td></tr>`).join("")||`<tr><td colspan="6" class="empty">No menu items match your search.</td></tr>`}</table></div>`;
+  box.innerHTML=`<div style="overflow-x:auto"><table><tr><th>Item</th><th>Price</th><th>Status</th><th>Stock</th><th>Sold</th><th></th></tr>${mine.map(f=>`<tr><td>${f.image?`<img src="${f.image}" alt="${f.name}" class="food-menu-image">`:f.icon}
+  <strong>${f.name}</strong>
+  <br>
+  <span class="muted small">${f.category} · ⏱ ${f.wait}m</span>
+</td><td>${fmt(f.price)}</td><td><span class="statuschip ${availMeta(f.availability)[1]}">${availMeta(f.availability)[0]}</span></td><td><div style="display:flex;gap:5px;align-items:center;min-width:170px"><button class="btn-ghost btn-sm" onclick="adjustStock(${f.food_id},-1)">−</button><input id="vm-stock-${f.food_id}" type="number" min="0" value="${f.stock_qty||0}" style="width:66px;padding:5px 7px"><button class="btn-ghost btn-sm" onclick="adjustStock(${f.food_id},1)">+</button><button class="btn-ghost btn-sm" onclick="updateStock(${f.food_id})">Set</button></div></td><td>${f.sold||0}</td><td style="white-space:nowrap"><button class="btn-ghost btn-sm" onclick="editFoodId=${f.food_id};vgo('menu')">✏️</button> <button class="btn-red btn-sm" onclick="delFood(${f.food_id})">🗑</button></td></tr>`).join("")||`<tr><td colspan="6" class="empty">No menu items match your search.</td></tr>`}</table></div>`;
 }
 function saveFood(){
   const name=document.getElementById("mf-name").value.trim(),price=parseFloat(document.getElementById("mf-price").value),wait=Math.max(0,parseInt(document.getElementById("mf-wait").value)||8);
   if(!name||!(price>0)){toast("Name and a valid price are required.");return;}
   const tags=[...document.querySelectorAll("#mf-tags .chip.on")].map(c=>c.dataset.t);
   const stock_qty=Math.max(0,parseInt(document.getElementById("mf-stock").value)||0);
-  const data={name,desc:document.getElementById("mf-desc").value.trim(),price:+price.toFixed(2),wait,stock_qty,category:document.getElementById("mf-cat").value,icon:document.getElementById("mf-icon").value.trim()||"🍽️",tags};
+  const data = {name,desc: document.getElementById("mf-desc").value.trim(),price: +price.toFixed(2),wait,stock_qty,category: document.getElementById("mf-cat").value,icon: document.getElementById("mf-icon").value.trim() || "🍽️",tags,image: selectedFoodImage};
   const v=myVendor();
   if(editFoodId){const f=DB.foodItems.find(f=>f.food_id===editFoodId&&f.vendor_id===v.vendor_id);if(f){Object.assign(f,data);syncStockAvailability(f);toast("Item updated");}}
   else{const f={food_id:nid(DB.foodItems,"food_id"),vendor_id:v.vendor_id,availability:"available",pop:50,sold:0,...data};syncStockAvailability(f);DB.foodItems.push(f);notifyStudents("New menu item 🎉",v.stall_name+" added "+name+" ("+fmt(price)+").");toast("Item added to menu");}
