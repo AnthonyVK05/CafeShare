@@ -910,7 +910,7 @@ const defaultFoodImages = {
 };
 
 DB.foodItems.forEach(f => {
-  if (!("image" in f) && defaultFoodImages[f.food_id]) {
+  if ((!f.image || typeof f.image !== "string") && defaultFoodImages[f.food_id]) {
     f.image = defaultFoodImages[f.food_id];
   }
 });
