@@ -845,8 +845,8 @@ const seedDB=()=>({
     {user_id:4,name:"Mei Ling",email:"meiling@student.my",password:"pass123",role:"student",created_at:"2026-02-11"}
   ],
   students:[
-    {student_id:1,user_id:1,preferences:"halal",budget:10,status:"active"},
-    {student_id:2,user_id:4,preferences:"none",budget:8,status:"active"}
+    {student_id:1,user_id:1,preferences:"halal",budget:10,status:"active",wallet_balance:30.00},
+    {student_id:2,user_id:4,preferences:"none",budget:8,status:"active",wallet_balance:20.00}
   ],
   vendors:[
     {vendor_id:1,user_id:0,stall_name:"Warung Kak Nita",location:"Main Cafeteria, Block A",description:"Halal Malay favourites, freshly cooked daily.",contact:"+6012-3456789",status:"approved",wait:10,cuisine:"Halal • Malay"},
@@ -877,6 +877,10 @@ const seedDB=()=>({
   ratings:[{rating_id:1,student_id:1,vendor_id:2,food_id:15,rating:5,comment:"Juicy chicken, always fresh!"}],
   orders:[{order_id:1,student_id:1,vendor_id:2,total_amount:11.00,status:"collected",order_time:"2026-09-17 12:34"}],
   orderItems:[{order_item_id:1,order_id:1,food_id:15,quantity:1,price:6.00},{order_item_id:2,order_id:1,food_id:4,quantity:1,price:2.00}],
+  walletTransactions:[
+    {transaction_id:1,student_id:1,type:"topup",amount:30.00,note:"Opening balance",created_at:"2026-09-17 09:00"},
+    {transaction_id:2,student_id:2,type:"topup",amount:20.00,note:"Opening balance",created_at:"2026-09-17 09:00"}
+  ],
   hourlyDemand:{9:22,10:35,11:58,12:126,13:142,14:48,15:30,16:26,17:44,18:66},
   notifications:[
     {notification_id:1,user_id:1,title:"Favourite back in stock!",message:"Chicken Rice at Uncle Lim's is available again.",read_status:false,created_at:"2026-09-18 08:15"},
@@ -919,7 +923,13 @@ saveDB();
 
 const DEFAULT_CATEGORIES=["Rice","Noodles","Chicken","Vegetarian","Drinks","Snacks","Desserts"];
 if(!Array.isArray(DB.categories)||!DB.categories.length)DB.categories=[...DEFAULT_CATEGORIES];
-DB.students.forEach(st=>{if(!st.status)st.status="active";});
+DB.students.forEach(st=>{if(!st.status)st.status="active";if(!Number.isFinite(Number(st.wallet_balance)))st.wallet_balance=30;st.wallet_balance=+Number(st.wallet_balance).toFixed(2);});
+if(!Array.isArray(DB.walletTransactions))DB.walletTransactions=[];
+DB.walletTransactions.forEach(t=>{
+  if(t.note==="Prototype wallet starting balance")t.note="Opening balance";
+  if(t.note==="Prototype welcome balance")t.note="Welcome balance";
+  if(t.note==="Prototype wallet top-up")t.note="E-Wallet top-up";
+});
 DB.vendors.forEach(v=>{
   if(typeof v.is_open!=="boolean")v.is_open=true;
   if(!v.hours)v.hours="10:00 AM – 8:00 PM";
@@ -930,7 +940,15 @@ DB.foodItems.forEach(f=>{
   f.stock_qty=Math.max(0,parseInt(f.stock_qty)||0);
   f.availability=f.stock_qty<=0?"soldout":f.stock_qty<=5?"limited":"available";
 });
-DB.orders.forEach(o=>{if(typeof o.sale_recorded!=="boolean")o.sale_recorded=o.status==="collected";});
+DB.orders.forEach(o=>{
+  if(typeof o.sale_recorded!=="boolean")o.sale_recorded=o.status==="collected";
+  if(!o.payment_method&&o.status==="collected"){o.payment_method="legacy";o.payment_status="paid";}
+  if(typeof o.wallet_refunded!=="boolean")o.wallet_refunded=false;
+  if(!Number.isFinite(Number(o.subtotal_amount)))o.subtotal_amount=+Number(o.total_amount||0).toFixed(2);
+  if(!Number.isFinite(Number(o.discount_amount)))o.discount_amount=0;
+  if(!Number.isFinite(Number(o.platform_fee)))o.platform_fee=0;
+  if(!Number.isFinite(Number(o.wallet_charge_amount)))o.wallet_charge_amount=+Number(o.total_amount||0).toFixed(2);
+});
 // Keep the demo vendor account connected to Uncle Lim's Rice Corner, even for older saved prototype data.
 const demoVendorUser=DB.users.find(u=>u.email==="vendor@cafeshare.my");
 if(demoVendorUser){
@@ -964,6 +982,44 @@ function restoreOrderStock(o){
   if(!o||o.stock_restored)return;
   DB.orderItems.filter(i=>i.order_id===o.order_id).forEach(i=>{const f=DB.foodItems.find(x=>x.food_id===i.food_id);if(f){const wasOut=f.stock_qty<=0;f.stock_qty=(f.stock_qty||0)+(i.quantity||1);syncStockAvailability(f);if(wasOut&&f.stock_qty>0&&typeof notifyFavouriteWatchers==="function")notifyFavouriteWatchers(f,"Favourite back in stock! ✅",f.name+" at "+vName(f.vendor_id)+" is available again.");}});
   o.stock_restored=true;
+}
+
+const WALLET_DISCOUNT_RATE=0.05;
+const WALLET_DISCOUNT_MIN=20;
+const WALLET_DISCOUNT_CAP=2;
+const PLATFORM_GMV_FEE_RATE=0.004;
+function walletBalance(student){return student?+Number(student.wallet_balance||0).toFixed(2):0;}
+function walletPaymentBreakdown(subtotal){
+  const base=+Number(subtotal||0).toFixed(2);
+  const discount=base>=WALLET_DISCOUNT_MIN?+Math.min(base*WALLET_DISCOUNT_RATE,WALLET_DISCOUNT_CAP).toFixed(2):0;
+  const discounted=+Math.max(0,base-discount).toFixed(2);
+  const fee=+(discounted*PLATFORM_GMV_FEE_RATE).toFixed(2);
+  const payable=+(discounted+fee).toFixed(2);
+  return {subtotal:base,discount,discounted,fee,payable};
+}
+function addWalletTransaction(student_id,type,amount,note,order_id=null){
+  if(!Array.isArray(DB.walletTransactions))DB.walletTransactions=[];
+  DB.walletTransactions.push({transaction_id:nid(DB.walletTransactions,"transaction_id"),student_id,type,amount:+Number(amount).toFixed(2),note:note||"",order_id,created_at:new Date().toLocaleString("en-MY",{hour12:false})});
+}
+function chargeWalletForOrder(student,o){
+  const amount=+Number(o.wallet_charge_amount??o.total_amount??0).toFixed(2);
+  if(!student||amount<=0||walletBalance(student)<amount)return false;
+  student.wallet_balance=+(walletBalance(student)-amount).toFixed(2);
+  o.payment_method="wallet";o.payment_status="paid";o.wallet_refunded=false;
+  const detail=["Payment for order #"+o.order_id];
+  if(Number(o.discount_amount||0)>0)detail.push(fmt(Number(o.discount_amount))+" discount");
+  if(Number(o.platform_fee||0)>0)detail.push(fmt(Number(o.platform_fee))+" service fee");
+  addWalletTransaction(student.student_id,"payment",-amount,detail.join(" · "),o.order_id);
+  return true;
+}
+function refundOrderWallet(o){
+  if(!o||o.payment_method!=="wallet"||o.payment_status!=="paid"||o.wallet_refunded)return false;
+  const st=DB.students.find(s=>s.student_id===o.student_id);if(!st)return false;
+  const amount=+Number(o.wallet_charge_amount??o.total_amount??0).toFixed(2);
+  st.wallet_balance=+(walletBalance(st)+amount).toFixed(2);
+  o.wallet_refunded=true;o.payment_status="refunded";
+  addWalletTransaction(st.student_id,"refund",amount,"Refund for rejected order #"+o.order_id,o.order_id);
+  return true;
 }
 function toast(msg){const t=document.createElement("div");t.className="toast";t.textContent=msg;document.body.appendChild(t);setTimeout(()=>t.remove(),2400);}
 function notify(user_id,title,message){DB.notifications.push({notification_id:nid(DB.notifications,"notification_id"),user_id,title,message,read_status:false,created_at:new Date().toLocaleString("en-MY",{hour12:false})});saveDB();}
