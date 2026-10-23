@@ -1167,7 +1167,7 @@ function topbarHTML(tabs,active){
       <div class="sidebar-bottom">
         <button class="iconbtn" title="Notifications" onclick="go('notifs')">🔔${unread?`<span class="badge">${unread}</span>`:""}</button>
         <button class="iconbtn" title="Toggle theme" onclick="toggleTheme()">🌓</button>
-        <button class="iconbtn" title="Log out" onclick="doLogout()">⏻</button>
+        <button class="iconbtn" title="Log out" aria-label="Log out" onclick="doLogout()">🛑</button>
       </div>
     </aside>
     <main class="content"><div class="wrap" id="main"></div></main>
@@ -1200,6 +1200,7 @@ function notifsHTML(){
   ${list.map(n=>`<div class="notifitem ${n.read_status?"":"unread"}"><span>${n.title.includes("stock")||n.title.includes("available")?"✅":n.title.includes("sold")?"🔴":n.title.includes("demand")||n.title.includes("Peak")?"📈":"📢"}</span>
   <div><strong>${n.title}</strong><p class="muted small">${n.message}</p><p class="muted small">${n.created_at}</p></div></div>`).join("")||`<div class="empty">You're all caught up 🎉</div>`}</div>`;
 }
+
 
 
 /*
