@@ -1131,7 +1131,7 @@ function doRegister(){
   const uid=nid(DB.users,"user_id");
   DB.users.push({user_id:uid,name,email,password:pass,role:registerRole,created_at:new Date().toISOString().slice(0,10)});
   if(registerRole==="student"){
-    DB.students.push({student_id:nid(DB.students,"student_id"),user_id:uid,preferences:"none",budget:10,status:"active"});
+    const sid=nid(DB.students,"student_id");DB.students.push({student_id:sid,user_id:uid,preferences:"none",budget:10,status:"active",wallet_balance:20});addWalletTransaction(sid,"topup",20,"Welcome balance");
   }else{
     const stallName=document.getElementById("rg-stall").value.trim(),location=document.getElementById("rg-location").value.trim(),cuisine=document.getElementById("rg-cuisine").value.trim(),contact=document.getElementById("rg-contact").value.trim(),description=document.getElementById("rg-desc").value.trim();
     DB.vendors.push({vendor_id:nid(DB.vendors,"vendor_id"),user_id:uid,stall_name:stallName,location,description,contact,status:"pending",wait:10,cuisine,is_open:false,rejection_reason:""});
@@ -1142,6 +1142,7 @@ function doRegister(){
   toast(registerRole==="vendor"?"Vendor account created! Wait for admin approval before logging in.":"Student account created! You can log in now.");
   render();
 }
+
 
     
 /*
