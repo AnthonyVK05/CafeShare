@@ -1153,7 +1153,7 @@ function notifsHTML(){
  */
 
 /* ==================== STUDENT ==================== */
-function studentTabs(){return [{v:"home",l:"Home"},{v:"explore",l:"Explore"},{v:"compare",l:"Compare"},{v:"builder",l:"Meal Builder"},{v:"favs",l:"Favourites"},{v:"profile",l:"Profile"}];}
+function studentTabs(){return [{v:"home",l:"Home"},{v:"explore",l:"Explore"},{v:"compare",l:"Compare"},{v:"builder",l:"Meal Builder"},{v:"favs",l:"Favourites"},{v:"wallet",l:"E-Wallet"},{v:"profile",l:"Profile"}];}
 function renderStudent(app){
   app.innerHTML=topbarHTML(studentTabs(),view);
   const m=document.getElementById("main");
@@ -1162,6 +1162,7 @@ function renderStudent(app){
   else if(view==="compare")m.innerHTML=compareHTML();
   else if(view==="builder"){m.innerHTML=builderHTML();bindBuilder();}
   else if(view==="favs")m.innerHTML=favsHTML();
+  else if(view==="wallet")m.innerHTML=walletHTML();
   else if(view==="profile")m.innerHTML=profileHTML();
   else if(view==="notifs")m.innerHTML=notifsHTML();
   bindStudentActions(m);
@@ -1336,6 +1337,8 @@ function builderHTML(){
   const total=items.reduce((s,f)=>s+f.price,0);
   const maxWait=items.length?Math.max(...items.map(f=>f.wait)):0;
   const over=!allowOver&&total>mealBudget;
+  const payment=walletPaymentBreakdown(total);
+  const balance=walletBalance(curStudent()),walletLow=items.length&&payment.payable>balance;
   return `<h2 style="margin-bottom:12px">🍱 Build My Meal</h2>
   <div class="detailwrap">
     <div class="panel">
@@ -1345,15 +1348,20 @@ function builderHTML(){
       <label style="margin-top:6px">Current meal (${items.length} item${items.length===1?"":"s"})</label>
       ${items.length?items.map((f,i)=>`<div class="kpi"><span>${f.icon} ${f.name} <span class="muted small">· ${vName(f.vendor_id)}</span></span>
         <span>${fmt(f.price)} <button class="btn-ghost btn-sm" onclick="meal.splice(${i},1);render()">✕</button></span></div>`).join(""):`<p class="muted small">Empty — add items from Explore or Compare.</p>`}
-      <div class="mealtotal"><span>Total</span><span class="${over?"over":""}">${fmt(total)}</span></div>
+      <div class="mealtotal"><span>Food subtotal</span><span class="${over?"over":""}">${fmt(total)}</span></div>
+      ${payment.discount>0?`<div class="kpi"><span>🎟️ E-Wallet discount</span><strong style="color:var(--green)">− ${fmt(payment.discount)}</strong></div>`:""}
+      <div class="kpi"><span>Service fee (0.4% GMV)</span><strong>+ ${fmt(payment.fee)}</strong></div>
+      <div class="kpi"><span><strong>Amount charged</strong></span><strong style="color:var(--brand)">${fmt(payment.payable)}</strong></div>
       <div class="kpi"><span>Remaining budget</span><span class="${over?"":""}" style="font-weight:700;color:${over?'var(--red)':'var(--green)'}">${over?"− "+fmt(total-mealBudget):fmt(mealBudget-total)}</span></div>
+      <div class="kpi"><span>💳 E-Wallet balance</span><span style="font-weight:700;color:${walletLow?'var(--red)':'var(--green)'}">${fmt(balance)}</span></div>
       ${items.length?`<div class="kpi"><span>Estimated total wait</span><span>⏱ ~${maxWait} min (parallel prep)</span></div>`:""}
       <div style="display:flex;gap:8px;margin-top:14px;flex-wrap:wrap">
-        <button class="btn-green" ${over||!items.length?"disabled style='opacity:.4'":""} onclick="placeOrder(${total.toFixed(2)})">✅ Place order</button>
+        <button class="btn-green" ${over||walletLow||!items.length?"disabled style='opacity:.4'":""} onclick="placeOrder()">💳 Pay ${fmt(payment.payable)} & place order</button>
         <button class="btn-ghost" onclick="findMeal()">🔀 Find Another Meal</button>
         <button class="btn-ghost" onclick="meal=[];render()">Clear</button></div>
       <label style="margin-top:12px;display:flex;gap:8px;align-items:center"><input type="checkbox" id="mb-over" ${allowOver?"checked":""} style="width:auto" onchange="allowOver=this.checked;render()"> Allow going slightly over budget</label>
       ${over?`<p class="small" style="color:var(--red);margin-top:8px">⚠️ Over budget by ${fmt(total-mealBudget)}. Remove items or allow over-budget.</p>`:""}
+      ${walletLow?`<p class="small" style="color:var(--red);margin-top:8px">⚠️ Insufficient E-Wallet balance. <button class="btn-ghost btn-sm" onclick="go('wallet')">Top up</button></p>`:""}
     </div>
     <div class="panel">
       <h3>Suggested add-ons within budget</h3>
@@ -1377,26 +1385,38 @@ function findMeal(){
   }
   toast("Couldn't find a combo under "+fmt(cap)+". Try raising the budget.");
 }
-function placeOrder(total){
+function placeOrder(){
   const st=curStudent();const items=meal.map(id=>DB.foodItems.find(f=>f.food_id===id)).filter(Boolean);
   if(!items.length){toast("Add at least one item before placing an order.");return;}
+  const actualTotal=+items.reduce((sum,f)=>sum+Number(f.price||0),0).toFixed(2);
+  const payment=walletPaymentBreakdown(actualTotal);
+  if(walletBalance(st)<payment.payable){toast("Insufficient E-Wallet balance. Please top up first.");view="wallet";render();return;}
   const qtyByFood={};items.forEach(f=>qtyByFood[f.food_id]=(qtyByFood[f.food_id]||0)+1);
   for(const [fid,qty] of Object.entries(qtyByFood)){
     const f=DB.foodItems.find(x=>x.food_id===+fid),v=f?DB.vendors.find(x=>x.vendor_id===f.vendor_id):null;
     if(!f||v?.is_open===false||f.stock_qty<qty){toast((f?f.name:"An item")+" no longer has enough stock. Please update your meal.");render();return;}
   }
   const vids=[...new Set(items.map(f=>f.vendor_id))];
-  vids.forEach(vid=>{
-    const vendorItems=items.filter(f=>f.vendor_id===vid),vendorTotal=vendorItems.reduce((sum,f)=>sum+Number(f.price||0),0),oid=nid(DB.orders,"order_id");
-    DB.orders.push({order_id:oid,student_id:st.student_id,vendor_id:vid,total_amount:+vendorTotal.toFixed(2),status:"new",order_time:new Date().toLocaleString("en-MY",{hour12:false}),sale_recorded:false,stock_restored:false,rejection_reason:""});
+  let remainingDiscount=payment.discount,remainingFee=payment.fee;
+  vids.forEach((vid,index)=>{
+    const vendorItems=items.filter(f=>f.vendor_id===vid),vendorSubtotal=+vendorItems.reduce((sum,f)=>sum+Number(f.price||0),0).toFixed(2),last=index===vids.length-1;
+    const vendorDiscount=last?+remainingDiscount.toFixed(2):+Math.min(remainingDiscount,payment.discount*(vendorSubtotal/actualTotal)).toFixed(2);
+    remainingDiscount=+(remainingDiscount-vendorDiscount).toFixed(2);
+    const vendorNet=+Math.max(0,vendorSubtotal-vendorDiscount).toFixed(2);
+    const vendorFee=last?+remainingFee.toFixed(2):+Math.min(remainingFee,payment.fee*(vendorSubtotal/actualTotal)).toFixed(2);
+    remainingFee=+(remainingFee-vendorFee).toFixed(2);
+    const walletCharge=+(vendorNet+vendorFee).toFixed(2),oid=nid(DB.orders,"order_id");
+    const order={order_id:oid,student_id:st.student_id,vendor_id:vid,subtotal_amount:vendorSubtotal,discount_amount:vendorDiscount,total_amount:vendorNet,platform_fee:vendorFee,wallet_charge_amount:walletCharge,status:"new",order_time:new Date().toLocaleString("en-MY",{hour12:false}),sale_recorded:false,stock_restored:false,rejection_reason:"",payment_method:"wallet",payment_status:"pending",wallet_refunded:false};
+    if(!chargeWalletForOrder(st,order)){toast("Unable to charge E-Wallet. Please check your balance.");return;}
+    DB.orders.push(order);
     const grouped={};vendorItems.forEach(f=>{grouped[f.food_id]=(grouped[f.food_id]||0)+1;});
     Object.entries(grouped).forEach(([fid,qty])=>{const f=DB.foodItems.find(x=>x.food_id===+fid);DB.orderItems.push({order_item_id:nid(DB.orderItems,"order_item_id"),order_id:oid,food_id:f.food_id,quantity:qty,price:f.price});});
     const vendor=DB.vendors.find(v=>v.vendor_id===vid),vu=vendor?DB.users.find(u=>u.user_id===vendor.user_id):null;
-    if(vu)notify(vu.user_id,"New order awaiting acceptance",curUser().name+" placed order #"+oid+" ("+fmt(vendorTotal)+").");
+    if(vu)notify(vu.user_id,"New paid order awaiting acceptance",curUser().name+" placed order #"+oid+" (food sale "+fmt(vendorNet)+") via E-Wallet.");
   });
   Object.entries(qtyByFood).forEach(([fid,qty])=>{const f=DB.foodItems.find(x=>x.food_id===+fid),wasOut=f.stock_qty<=0;f.stock_qty=Math.max(0,f.stock_qty-qty);syncStockAvailability(f);if(f.stock_qty<=0&&!wasOut&&typeof notifyFavouriteWatchers==="function")notifyFavouriteWatchers(f,"Sold out 😢",f.name+" at "+vName(f.vendor_id)+" just sold out.");});
-  notify(curUser().user_id,"Order placed 🎉","Your order was sent to the vendor and is waiting for acceptance.");
-  meal=[];saveDB();toast("Order placed! The vendor will accept it shortly.");view="profile";render();
+  notify(curUser().user_id,"Order paid & placed 🎉","E-Wallet charged "+fmt(payment.payable)+". Your order was sent to the vendor.");
+  meal=[];saveDB();toast("Payment successful! "+fmt(payment.payable)+" charged.");view="builder";render();
 }
 
 /* ---------- Favourites / Profile / Notifications ---------- */
@@ -1406,6 +1426,39 @@ function favsHTML(){
   return `<h2 style="margin-bottom:12px">💛 Favourites</h2>
   <div class="grid">${favs.map(f=>foodCard(f)).join("")||`<div class="empty panel" style="grid-column:1/-1">No favourites yet. Tap 🤍 on any food card to save it here — we'll notify you when it's back in stock.</div>`}</div>`;
 }
+function walletHTML(){
+  const st=curStudent();
+  const tx=(DB.walletTransactions||[]).filter(t=>t.student_id===st.student_id).sort((a,b)=>b.transaction_id-a.transaction_id).slice(0,10);
+  return `<h2 style="margin-bottom:12px">💳 E-Wallet</h2>
+  <div class="detailwrap">
+    <div class="panel wallet-card">
+      <div class="wallet-balance-box">
+        <p>Available balance</p>
+        <div class="wallet-balance-amount">${fmt(walletBalance(st))}</div>
+        <div class="wallet-ready">● Ready to pay with CafeShare E-Wallet</div>
+      </div>
+      <div class="wallet-offer-box">
+        <strong>🎟️ E-Wallet offer</strong>
+        <p class="small" style="margin-top:4px">Get 5% off food orders of RM20 or more, up to RM2 per checkout today!</p>
+        <p class="muted small" style="margin-top:4px">A 0.4% service fee is applied to the discounted food total when you pay.</p>
+      </div>
+      <label>Quick top-up</label>
+      <div class="chiprow" style="margin:8px 0 14px">${[5,10,20,50].map(a=>`<button class="chip" onclick="topUpWallet(${a})">+ RM ${a}</button>`).join("")}</div>
+      <label>Custom amount (RM)</label>
+      <div style="display:flex;gap:8px;max-width:340px"><input id="wallet-custom" type="number" min="1" step="1" placeholder="e.g. 15"><button class="btn-brand" onclick="topUpCustomWallet()">Top up</button></div>
+    </div>
+    <div class="panel">
+      <h3>Recent wallet activity</h3>
+      ${tx.length?tx.map(t=>`<div class="kpi"><span><strong>${t.type==="topup"?"Top up":t.type==="refund"?"Refund":"Payment"}</strong><br><span class="muted small">${t.note||"Wallet transaction"} · ${t.created_at}</span></span><strong style="color:${t.amount>=0?'var(--green)':'var(--red)'}">${t.amount>=0?'+ ':''}${fmt(Math.abs(t.amount))}</strong></div>`).join(""):`<p class="muted small" style="margin-top:8px">No wallet activity yet.</p>`}
+    </div>
+  </div>`;
+}
+function topUpWallet(amount){
+  const st=curStudent(),a=+Number(amount).toFixed(2);if(!(a>0))return;
+  st.wallet_balance=+(walletBalance(st)+a).toFixed(2);addWalletTransaction(st.student_id,"topup",a,"E-Wallet top-up");saveDB();render();toast(fmt(a)+" added to your E-Wallet");
+}
+function topUpCustomWallet(){const el=document.getElementById("wallet-custom"),a=parseFloat(el?.value);if(!(a>0)){toast("Enter a valid top-up amount.");return;}topUpWallet(a);}
+
 function profileHTML(){
   const u=curUser(),st=curStudent();
   const myOrders=DB.orders.filter(o=>o.student_id===st.student_id).sort((a,b)=>b.order_id-a.order_id);
@@ -1425,7 +1478,7 @@ function profileHTML(){
       <h3>Order history</h3>
       ${myOrders.length?myOrders.map(o=>{const items=DB.orderItems.filter(i=>i.order_id===o.order_id).map(i=>{const f=DB.foodItems.find(x=>x.food_id===i.food_id);return f?f.name+" ×"+i.quantity:"";}).join(", ");
       return `<div class="kpi"><span><strong>#${o.order_id} · ${vName(o.vendor_id)}</strong><br><span class="muted small">${items} · ${o.order_time}</span>${o.status==="rejected"&&o.rejection_reason?`<br><span class="small" style="color:var(--red)">Reason: ${o.rejection_reason}</span>`:""}</span>
-      <span style="text-align:right">${fmt(o.total_amount)}<br>${orderBadge(o.status)}${o.status==="ready"?`<br><button class="btn-green btn-sm" style="margin-top:6px" onclick="studentCollectOrder(${o.order_id})">Collected</button>`:""}</span></div>`;}).join(""):`<p class="muted small" style="margin-top:8px">No orders yet. Build a meal and place your first order!</p>`}
+      <span style="text-align:right">${fmt(o.wallet_charge_amount??o.total_amount)}<br><span class="muted small">${o.payment_method==="wallet"?(o.payment_status==="refunded"?"💳 Refunded":"💳 E-Wallet paid"):""}${Number(o.discount_amount||0)>0?` · −${fmt(Number(o.discount_amount))} discount`:""}${Number(o.platform_fee||0)>0?` · ${fmt(Number(o.platform_fee))} fee`:""}</span>${o.payment_method==="wallet"?"<br>":""}${orderBadge(o.status)}${o.status==="ready"?`<br><button class="btn-green btn-sm" style="margin-top:6px" onclick="studentCollectOrder(${o.order_id})">Collected</button>`:""}</span></div>`;}).join(""):`<p class="muted small" style="margin-top:8px">No orders yet. Build a meal and place your first order!</p>`}
     </div>
   </div>`;
 }
